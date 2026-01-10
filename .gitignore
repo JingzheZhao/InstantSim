@@ -1,0 +1,11 @@
+dataset/
+*.epw
+
+__pycache__/
+.venv/
+venv/
+*.pyc
+
+
+*.3dmbak
+*.rhl
