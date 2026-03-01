@@ -1,9 +1,9 @@
 import os
 
 
-target_folder = "E:/InstantSim/dataset/test_B/rectangle"
+target_folder = "E:/InstantSim/dataset/A"
 
-start_number = 2300
+start_number = 3600
 
 
 

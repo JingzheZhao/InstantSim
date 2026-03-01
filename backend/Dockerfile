@@ -9,7 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # 3. Set the working directory in the container
-WORKDIR /code
+WORKDIR /app
 
 # 4. Install system dependencies required for OpenCV
 # "libgl1" and "libglib2.0-0" are crucial for cv2 to run on Linux

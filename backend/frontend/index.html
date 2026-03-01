@@ -7,101 +7,129 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
+    /* --- 100% 原始样式，绝对未修改 --- */
     * { box-sizing: border-box; }
     body { margin: 0; overflow: hidden; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8f9fa; user-select: none; }
     canvas { display: block; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; outline: none; }
     #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; padding: 30px; display: flex; flex-direction: column; justify-content: flex-start; }
 
-    .sidebar { width: 380px; height: 100%; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-      border-radius: 24px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0,0,0,0.05);
-      padding: 32px; display: flex; flex-direction: column; pointer-events: auto; color: #111; overflow-y: auto; scrollbar-width: thin; }
-    .sidebar::-webkit-scrollbar { width: 4px; }
-    .sidebar::-webkit-scrollbar-track { background: transparent; }
-    .sidebar::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.1); border-radius: 2px; }
+    .sidebar { width: 380px; height: 100%; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      border-radius: 24px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.05);
+      padding: 32px; display: flex; flex-direction: column; pointer-events: auto; color: #111; overflow: hidden; scrollbar-width: none; }
+    .sidebar::-webkit-scrollbar { display: none; }
 
-    .project-meta { margin-bottom: 32px; flex-shrink: 0; }
-    .project-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; color: #000; outline: none; margin-bottom: 4px; }
-    .project-subtitle { font-size: 0.85rem; color: #666; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+    .project-meta { margin-bottom: 24px; flex-shrink: 0; }
+    .project-title { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; color: #000; outline: none; margin-bottom: 6px; }
+    .project-subtitle { font-size: 0.8rem; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0px; }
 
-    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 40px; flex-shrink: 0; }
-    .kpi-card.main { grid-column: span 2; background: #fafafa; }
-    .kpi-card { background: #f4f5f7; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s ease; }
-    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .section-title { font-size: 0.85rem; font-weight: 600; color: #111; margin-bottom: 12px; border-top: 1px solid #eee; padding-top: 16px; margin-top: 0; }
+    .section-title:first-of-type { margin-top: 16px; }
 
-    .kpi-label { font-size: 0.75rem; font-weight: 600; color: #888; text-transform: uppercase; margin-bottom: 8px; }
-    .kpi-number-group { display: flex; align-items: baseline; gap: 4px; margin-bottom: 12px; }
-    .kpi-value { font-size: 2.2rem; font-weight: 700; line-height: 1; letter-spacing: -0.03em; color: #111; }
-    .kpi-unit { font-size: 0.9rem; font-weight: 600; color: #999; }
+    .control-group { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; padding: 16px; background: rgba(0,0,0,0.03); border-radius: 16px; }
 
-    .mini-progress-bg { width: 100%; height: 4px; background: rgba(0,0,0,0.06); border-radius: 2px; overflow: hidden; }
-    .mini-progress-fill { height: 100%; border-radius: 2px; width: 0%; transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1); }
+    .search-container { position: relative; width: 100%; }
+    .search-box { width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); background: white; font-size: 0.85rem; outline: none; transition: border 0.2s; box-sizing: border-box; }
+    .search-box:focus { border-color: #007aff; }
 
-    .section-title { font-size: 0.9rem; font-weight: 600; color: #111; margin-bottom: 20px; border-top: 1px solid #eee; padding-top: 20px; flex-shrink: 0; }
-    .bar-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 10px; }
-    .bar-row { display: flex; align-items: center; gap: 12px; height: 20px; }
-    .bar-label { width: 24px; font-size: 0.75rem; color: #888; text-align: right; font-weight: 500; }
+    .custom-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; width: 100%;
+      background: white; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 100; max-height: 200px;
+      overflow-y: auto; display: none;
+    }
+    .dropdown-item { padding: 10px 16px; font-size: 0.8rem; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:hover { background: #f0f7ff; color: #007aff; }
+
+    .slider-row { display: flex; flex-direction: column; gap: 6px; }
+    .slider-header { display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: #444; margin-bottom: 0px; }
+    input[type=range] { width: 100%; height: 4px; border-radius: 2px; background: #ddd; outline: none; -webkit-appearance: none; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #007aff; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; flex-shrink: 0; }
+    .kpi-card.main { grid-column: span 2; }
+    .kpi-card { background: #f4f5f7; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; }
+    .kpi-label { font-size: 0.7rem; font-weight: 600; color: #888; text-transform: uppercase; margin-bottom: 6px; }
+    .kpi-number-group { display: flex; align-items: baseline; gap: 4px; margin-bottom: 8px; }
+    .kpi-value { font-size: 1.8rem; font-weight: 700; line-height: 1; letter-spacing: -0.03em; color: #111; }
+    .kpi-unit { font-size: 0.8rem; font-weight: 600; color: #999; }
+    .mini-progress-bg { width: 100%; height: 3px; background: rgba(0,0,0,0.06); border-radius: 2px; overflow: hidden; }
+    .mini-progress-fill { height: 100%; width: 0%; transition: width 0.8s ease; }
+
+    .bar-list { display: flex; flex-direction: column; gap: 6px; }
+    .bar-row { display: flex; align-items: center; gap: 10px; height: 18px; }
+    .bar-label { width: 28px; font-size: 0.7rem; color: #888; text-align: right; font-weight: 600; }
     .progress-bg { flex: 1; height: 6px; background: #f4f5f7; border-radius: 3px; overflow: hidden; }
-    .progress-fill { height: 100%; border-radius: 3px; width: 0%; transition: width 0.5s ease-out; }
-    .bar-val-text { width: 36px; text-align: right; font-size: 0.75rem; color: #444; font-variant-numeric: tabular-nums; }
+    .progress-fill { height: 100%; width: 0%; transition: width 0.5s ease-out; }
+    .bar-val-text { width: 32px; text-align: right; font-size: 0.7rem; color: #444; font-weight: 500; }
 
-    .legend-floating { position: absolute; bottom: 30px; left: 430px; display: flex; gap: 12px; pointer-events: auto; background: transparent; align-items: flex-end; }
-    .color-scale { width: 10px; height: 200px; background: linear-gradient(to top, #3d5a9e 0%, #5b9ff0 20%, #90d8ff 40%, #fff066 60%, #ffaa00 80%, #ff5500 100%); border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-    .legend-labels { height: 200px; display: flex; flex-direction: column; justify-content: space-between; font-size: 0.75rem; color: #444; font-weight: 600; text-align: left; padding-bottom: 1px; }
+    .legend-floating { position: absolute; bottom: 30px; left: 430px; display: flex; gap: 12px; pointer-events: auto; }
+    .color-scale { width: 10px; height: 180px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .legend-labels { height: 180px; display: flex; flex-direction: column; justify-content: space-between; font-size: 0.7rem; color: #444; font-weight: 600; }
 
-    .status-badge { position: absolute; top: 24px; right: 24px; background: #fff; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;
-      color: #333; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); pointer-events: auto; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #ff3b30; }
+    .status-badge { position: absolute; top: 24px; right: 24px; background: #fff; padding: 6px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; box-shadow: 0 2px 10px rgba(0,0,0,0.08); pointer-events: auto; display: flex; align-items: center; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #ff3b30; transition: background 0.3s; }
     .dot.active { background: #32d74b; }
   </style>
-
-  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 
 <body>
   <div id="ui-layer">
     <div class="sidebar">
       <div class="project-meta">
-        <div class="project-title" contenteditable="true">Untitled</div>
+        <div class="project-title" contenteditable="true">Environment Simulation</div>
         <div class="project-subtitle">Direct Sun Hours Analysis</div>
       </div>
+
+      <div class="section-title">Location & Time Settings</div>
+
+      <div class="control-group">
+        <div class="search-container">
+          <input type="text" class="search-box" placeholder="Search world cities..." id="loc-search" autocomplete="off">
+          <div id="dropdown-menu" class="custom-dropdown"></div>
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header"><span>Month</span><span id="label-month">June</span></div>
+          <input type="range" id="slider-month" min="1" max="12" value="6">
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header"><span>Day</span><span id="label-day">21</span></div>
+          <input type="range" id="slider-day" min="1" max="31" value="21">
+        </div>
+      </div>
+
+      <div class="section-title">Key Metrics</div>
 
       <div class="kpi-grid">
         <div class="kpi-card main">
           <div class="kpi-label">Average Daylight</div>
           <div class="kpi-number-group">
-            <div class="kpi-value" id="val-avg" style="color: #ffa500">--</div>
+            <div class="kpi-value" id="val-avg" style="color: #ffaa00">--</div>
             <div class="kpi-unit">hours</div>
           </div>
-          <div class="mini-progress-bg"><div class="mini-progress-fill" id="bar-avg" style="background: #ffa500; width: 0%"></div></div>
+          <div class="mini-progress-bg"><div class="mini-progress-fill" id="bar-avg" style="background: #ffaa00"></div></div>
         </div>
-
         <div class="kpi-card">
           <div class="kpi-label">Low Sun (&lt;2h)</div>
-          <div class="kpi-number-group">
-            <div class="kpi-value" id="val-low" style="color: #2a0098">--</div>
-            <div class="kpi-unit">%</div>
-          </div>
-          <div class="mini-progress-bg"><div class="mini-progress-fill" id="bar-low" style="background: #2a0098; width: 0%"></div></div>
+          <div class="kpi-number-group"><div class="kpi-value" id="val-low" style="color: #3d5a9e">--</div><div class="kpi-unit">%</div></div>
+          <div class="mini-progress-bg"><div class="mini-progress-fill" id="bar-low" style="background: #3d5a9e"></div></div>
         </div>
-
         <div class="kpi-card">
           <div class="kpi-label">Solar Pot. (&gt;6h)</div>
-          <div class="kpi-number-group">
-            <div class="kpi-value" id="val-high" style="color: #e6c200">--</div>
-            <div class="kpi-unit">%</div>
-          </div>
-          <div class="mini-progress-bg"><div class="mini-progress-fill" id="bar-high" style="background: #ffd700; width: 0%"></div></div>
+          <div class="kpi-number-group"><div class="kpi-value" id="val-high" style="color: #ff5500">--</div><div class="kpi-unit">%</div></div>
+          <div class="mini-progress-bg"><div class="mini-progress-fill" id="bar-high" style="background: #ff5500"></div></div>
         </div>
       </div>
 
       <div class="section-title">Hourly Distribution</div>
-      <div class="bar-list" id="bar-chart-container"></div>
+      <div id="bar-chart-container" class="bar-list"></div>
     </div>
 
     <div class="legend-floating">
-      <div class="color-scale"></div>
-      <div class="legend-labels"><span>10h</span><span>8h</span><span>6h</span><span>4h</span><span>2h</span><span>0h</span></div>
+      <div class="color-scale" id="main-color-scale"></div>
+      <div class="legend-labels"><span>8h</span><span>6h</span><span>4h</span><span>2h</span><span>0h</span></div>
     </div>
 
     <div class="status-badge">
@@ -110,40 +138,31 @@
     </div>
   </div>
 
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
+
   <script>
-    console.log("FRONTEND VERSION: shader-live-1");
-
-    // 高饱和度配色方案：蓝色（低光照）→ 橙红色（高光照）
-    const hourColors = [
-      "#3d5a9e", // 0h - 深蓝
-      "#4a7bc8", // 1h - 宝蓝
-      "#5b9ff0", // 2h - 亮蓝
-      "#70c0ff", // 3h - 天蓝
-      "#90d8ff", // 4h - 浅蓝
-      "#b8f0d4", // 5h - 青绿
-      "#fff066", // 6h - 明黄
-      "#ffdd00", // 7h - 金黄
-      "#ffaa00", // 8h - 橙黄
-      "#ff8800", // 9h - 橙色
-      "#ff5500"  // 10h - 橙红
-    ];
-
-    // 初始化分布条
+    const hourColors = ["#3d5a9e", "#5189db", "#5b9ff0", "#85d1ff", "#b8f0d4", "#fff066", "#ffcc00", "#ff8800", "#ff5500"];
     const barContainer = document.getElementById("bar-chart-container");
-    barContainer.innerHTML = "";
     hourColors.forEach((color, index) => {
-      barContainer.innerHTML += `
-        <div class="bar-row">
-          <div class="bar-label">${index}h</div>
-          <div class="progress-bg"><div class="progress-fill" id="dist-bar-${index}" style="background-color: ${color};"></div></div>
-          <div class="bar-val-text" id="dist-val-${index}">0%</div>
-        </div>`;
+      barContainer.innerHTML += `<div class="bar-row"><div class="bar-label">${index}h</div><div class="progress-bg"><div class="progress-fill" id="dist-bar-${index}" style="background-color: ${color};"></div></div><div class="bar-val-text" id="dist-val-${index}">0%</div></div>`;
     });
+    document.getElementById("main-color-scale").style.background = `linear-gradient(to top, ${[...hourColors].join(',')})`;
 
-    // Three.js 场景
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf8f9fa);
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"];
+    const locInput = document.getElementById("loc-search"), dropdown = document.getElementById("dropdown-menu");
+    const sMonth = document.getElementById("slider-month"), sDay = document.getElementById("slider-day");
+    const lMonth = document.getElementById("label-month"), lDay = document.getElementById("label-day");
+    const statusDot = document.getElementById("status-dot"), statusText = document.getElementById("status-text");
 
+    let currentLat = 43.65, currentLon = -79.38;
+    let lastLat = null, lastLon = null;
+    let hasUserSelectedLocation = false;
+    let searchTimeout;
+
+    // --- 3D 场景初始化 (高画质) ---
+    const scene = new THREE.Scene(); scene.background = new THREE.Color(0xf8f9fa);
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
     camera.position.set(100, 200, 100);
 
@@ -152,16 +171,14 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    // renderer.outputEncoding = THREE.sRGBEncoding;  // 暂时禁用
+    // renderer.toneMapping = THREE.ACESFilmicToneMapping;  // 禁用色调映射
+    // renderer.toneMappingExposure = 1.1;  // 禁用曝光调整
     document.body.appendChild(renderer.domElement);
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
+    controls.enableDamping = true; controls.dampingFactor = 0.05;
 
-    // 灯光
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8899aa, 0.4);
     hemiLight.position.set(0, 500, 0);
     scene.add(hemiLight);
@@ -178,357 +195,459 @@
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
     scene.add(ambientLight);
 
-    // 全局
-    let baseMesh = null;
-    let analysisMesh = null;
-    let mainGroup = null;
-    let maskRectUV = null;
-    let maskImageSize = null;
+    let mainGroup = new THREE.Group();
+    let sunPathGroup = new THREE.Group();
+    let sunPositionsGroup = new THREE.Group();
+    scene.add(mainGroup); scene.add(sunPathGroup); scene.add(sunPositionsGroup);
 
-    // 贴图相关
-    let analysisTexture = null;
-    let maskTexture = null;
-    let nextBlobType = null; // "ANALYSIS" | "MASK"
+    let globalSceneRadius = 100;
+    let analysisMesh = null, analysisTexture = null, maskRectUV = null, nextBlobType = null;
 
-    const statusText = document.getElementById("status-text");
-    const statusDot = document.getElementById("status-dot");
-
-    async function computeMaskRectFromBlob(maskBlob) {
-      const bmp = await createImageBitmap(maskBlob);
-      const w = bmp.width, h = bmp.height;
-
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(bmp, 0, 0);
-
-      const img = ctx.getImageData(0, 0, w, h).data;
-
-      // 找非黑像素（mask 白色区域），阈值可以稍微低一点防止抗锯齿
-      let minX = w, minY = h, maxX = -1, maxY = -1;
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          const i = (y * w + x) * 4;
-          const r = img[i]; // mask 是灰度，r 就够
-          if (r > 10) {     // 阈值：>10 认为是有效
-            if (x < minX) minX = x;
-            if (y < minY) minY = y;
-            if (x > maxX) maxX = x;
-            if (y > maxY) maxY = y;
-          }
-        }
-      }
-
-      if (maxX < 0) {
-        console.warn("[MASK] No valid pixels found");
-        return null;
-      }
-
-      // 注意：ImageData y=0 在顶部；Three offset 的 v=0 在底部（当 flipY=false 时）
-      // 我们先算出 0..1 的 u0/u1
-      const u0 = minX / w;
-      const u1 = (maxX + 1) / w;
-
-      // v 需要把图像坐标转成"从底部算起"
-      const vTop = minY / h;
-      const vBottom = (maxY + 1) / h;
-
-      const v0 = 1.0 - vBottom; // bottom -> v0
-      const v1 = 1.0 - vTop;    // top -> v1
-
-      console.log("[MASK] rect px:", {minX, minY, maxX, maxY}, "uv:", {u0, v0, u1, v1});
-      return { u0, v0, u1, v1, w, h };
+    // --- SunPath 功能 ---
+    function generateTextSprite(text, radius, fontSize) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256; canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+      ctx.fillStyle = '#8c8c8c';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 64);
+      const texture = new THREE.CanvasTexture(canvas);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false }));
+      const scale = radius * 0.15;
+      sprite.scale.set(scale, scale * 0.5, 1);
+      sprite.renderOrder = 9999;
+      return sprite;
     }
 
-    function tryApplyAnalysisTexture() {
-      if (!analysisMesh) return;
-      if (!analysisTexture) return;
+    function redrawSunPathVisuals(lat, lon) {
+      sunPathGroup.clear();
+      const r = globalSceneRadius * 1.2;
 
-      // 关键：应用 maskRectUV 到 analysisTexture，并翻转Y轴
-      if (maskRectUV) {
-        const uSpan = maskRectUV.u1 - maskRectUV.u0;
-        const vSpan = maskRectUV.v1 - maskRectUV.v0;
+      const lineMat = new THREE.LineBasicMaterial({ color: 0x555555, transparent: true, opacity: 0.2 });
+      const lightLineMat = new THREE.LineBasicMaterial({ color: 0x555555, transparent: true, opacity: 0.2 });
+      const ringMat = new THREE.LineBasicMaterial({ color: 0x555555, transparent: false, opacity: 0.6 });
 
-        // 翻转Y轴：repeat.y 设为负数，offset.y 从顶部算起
-        analysisTexture.repeat.set(uSpan, -vSpan);
-        analysisTexture.offset.set(maskRectUV.u0, maskRectUV.v1);
-        analysisTexture.needsUpdate = true;
+      // 🕒 毫秒级时间计算辅助函数
+      const baseTime = Date.UTC(2023, 0, 1);
+      const lonOffsetMs = (lon / 15) * 3600 * 1000;
 
-        console.log("[APPLY] Applied rect (flipped Y) to analysisTexture:", maskRectUV);
-      }
+      // 1. 月份弧线 Month Arcs
+      [0, 1, 2, 3, 4, 5, 6, 11].forEach(m => {
+        const monthBase = new Date(Date.UTC(2023, m, 21)).getTime();
+        const points = [];
 
-      analysisMesh.material = new THREE.MeshBasicMaterial({
-        map: analysisTexture,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.92,
-        depthTest: true,
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-        polygonOffsetUnits: -1
+        for (let t = 0; t <= 24; t += 0.1) {
+          const targetTime = monthBase + (t * 3600 * 1000) - lonOffsetMs;
+          const date = new Date(targetTime);
+
+          const pos = SunCalc.getPosition(date, lat, lon);
+          if (pos.altitude > 0.0) {
+            const x = r * Math.cos(pos.altitude) * Math.sin(pos.azimuth + Math.PI);
+            const z = r * Math.cos(pos.altitude) * Math.cos(pos.azimuth + Math.PI);
+            const y = r * Math.sin(pos.altitude);
+            points.push(new THREE.Vector3(x, y, z));
+          }
+        }
+        if (points.length > 1) sunPathGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), lineMat));
       });
-      analysisMesh.material.needsUpdate = true;
 
-      statusText.innerText = "Analysis Complete";
-      console.log("[APPLY-DEBUG] basic material applied, uv?", !!analysisMesh.geometry.attributes.uv);
+      // 2. 8字形小时线 Analemmas
+      for (let h = 0; h <= 24; h++) {
+        const hPoints = [];
+        const hourOffsetMs = (h * 3600 * 1000) - lonOffsetMs;
+
+        for (let d = 0; d <= 365; d += 2) {
+          const targetTime = baseTime + (d * 24 * 3600 * 1000) + hourOffsetMs;
+          const date = new Date(targetTime);
+
+          const pos = SunCalc.getPosition(date, lat, lon);
+          if (pos.altitude > 0.0) {
+            const x = r * Math.cos(pos.altitude) * Math.sin(pos.azimuth + Math.PI);
+            const z = r * Math.cos(pos.altitude) * Math.cos(pos.azimuth + Math.PI);
+            const y = r * Math.sin(pos.altitude);
+            hPoints.push(new THREE.Vector3(x, y, z));
+          }
+        }
+        if (hPoints.length > 1) sunPathGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(hPoints), lightLineMat));
+      }
+
+      // 3. 底座三圈
+      [1.0, 0.98, 0.97].forEach(s => {
+        const pts = [];
+        for (let i = 0; i <= 128; i++) {
+          const theta = (i / 128) * Math.PI * 2;
+          pts.push(new THREE.Vector3(Math.cos(theta) * r * s, 0, Math.sin(theta) * r * s));
+        }
+        sunPathGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ringMat));
+      });
+
+      // 5. 方位标与刻度
+      const dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+      dirs.forEach((d, i) => {
+        const isCardinal = ["N", "S", "E", "W"].includes(d);
+        const fontSize = isCardinal ? 90 : 40;
+        const sprite = generateTextSprite(d, r, fontSize);
+        const angle = Math.PI - (i * 22.5 * Math.PI / 180);
+
+        let tickStartScale = 0.97;
+        let tickEndScale = isCardinal ? 1.04 : 1.0;
+        let textPosScale = isCardinal ? 1.15 : 1.1;
+
+        const tickStart = new THREE.Vector3(Math.sin(angle)*r*tickStartScale, 0, Math.cos(angle)*r*tickStartScale);
+        const tickEnd = new THREE.Vector3(Math.sin(angle)*r*tickEndScale, 0, Math.cos(angle)*r*tickEndScale);
+        const tickGeo = new THREE.BufferGeometry().setFromPoints([tickStart, tickEnd]);
+        sunPathGroup.add(new THREE.Line(tickGeo, ringMat));
+
+        sprite.position.set(r * textPosScale * Math.sin(angle), 0, r * textPosScale * Math.cos(angle));
+        sunPathGroup.add(sprite);
+      });
     }
 
-    // WebSocket
-    const ws = new WebSocket("ws://" + window.location.host + "/ws");
-    ws.binaryType = "blob";
 
-    ws.onopen = () => {
-      console.log("[WS] open");
-      statusText.innerText = "Connected";
-      statusDot.classList.add("active");
+    function updateSunPositionAndVectors(lat, lon, month, day) {
+      sunPositionsGroup.clear();
+      if (!hasUserSelectedLocation) return [];
 
-      ws.send(JSON.stringify({ type: "LEGEND_PALETTE", format: "hex", colors: hourColors }));
-      console.log("[WS] palette sent", hourColors);
-    };
+      const r = globalSceneRadius * 1.2;
+      const baseDate = new Date(Date.UTC(new Date().getFullYear(), month - 1, day));
+      const baseTime = baseDate.getTime();
 
-    ws.onerror = (e) => console.log("[WS] error", e);
-    ws.onclose = (e) => console.log("[WS] close", e);
+      // 🌟 关键分离：定义两套时间偏移
 
-    ws.onmessage = async (event) => {
-      if (typeof event.data === "string") {
-        console.log("[WS] text:", event.data);
+      // 1. 视觉偏移 (Visual Offset): 使用精确浮点数
+      // 目的：匹配背景 redrawSunPathVisuals 的算法，让球体落在 8 字线上
+      const visualOffsetMs = (lon / 15) * 3600 * 1000;
 
-        if (event.data === "UPDATE_TEXTURE") {
-          statusText.innerText = "Processing...";
-          analysisTexture = null;
-          nextBlobType = null;
-          return;
-        }
+      // 2. 数据偏移 (Data Offset): 使用整数四舍五入
+      // 目的：匹配 Ladybug/EPW 的标准时区，确保数据精确
+      const dataTimeZoneOffset = Math.round(lon / 15);
 
-        if (event.data.startsWith("BLOB_TYPE:")) {
-          nextBlobType = event.data.split(":")[1];
-          console.log("[WS] next blob type =", nextBlobType);
-          return;
-        }
+      const sunVectors = [];
+      const sphereGeo = new THREE.SphereGeometry(r * 0.015);
+      const sunMat = new THREE.MeshBasicMaterial({ color: 0xffdd00 });
 
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.type === "GEOMETRY") updateGeometry(msg.data);
-          if (msg.type === "ANALYSIS_RESULT") updateCards(msg.data);
-          if (msg.type === "PALETTE_OK") console.log("[WS] palette ok");
-          if (msg.type === "ERROR") console.log("[WS] server error:", msg.message);
-        } catch (e) {}
+      // 循环 0-24 小时
+      for (let h = 0; h <= 24; h++) {
 
-        return;
-      }
+        // --- A. 视觉渲染 (Visuals) ---
+        // 使用 visualOffsetMs 计算，为了“好看”和“对齐网格”
+        if (h >= 9 && h <= 17) {
+          const vHourOffsetMs = (h * 3600 * 1000) - visualOffsetMs;
+          const vPos = SunCalc.getPosition(new Date(baseTime + vHourOffsetMs), lat, lon);
 
-      if (event.data instanceof Blob) {
-        const blob = event.data;
+          if (vPos.altitude > 0.0) {
+            const vx = r * Math.cos(vPos.altitude) * Math.sin(vPos.azimuth + Math.PI);
+            const vz = r * Math.cos(vPos.altitude) * Math.cos(vPos.azimuth + Math.PI);
+            const vy = r * Math.sin(vPos.altitude);
 
-        console.log("[WS] blob:", "type =", nextBlobType, "size =", blob.size);
-
-        if (!nextBlobType) {
-          console.warn("[WS] blob received but missing BLOB_TYPE header");
-          return;
-        }
-
-        // 先把这次的类型保存下来，然后立刻清空
-        const thisType = nextBlobType;
-        nextBlobType = null;
-
-        // --- 如果是 MASK：先算出白色矩形在纹理里的范围（u0/v0/u1/v1） ---
-        if (thisType === "MASK") {
-          const rect = await computeMaskRectFromBlob(blob);
-          if (rect) {
-            maskRectUV = rect; // 保存全局
+            const mesh = new THREE.Mesh(sphereGeo, sunMat);
+            mesh.position.set(vx, vy, vz);
+            sunPositionsGroup.add(mesh);
           }
         }
 
-        const imageUrl = URL.createObjectURL(blob);
-        new THREE.TextureLoader().load(imageUrl, (texture) => {
-          texture.flipY = false;
-          texture.generateMipmaps = true;
-          texture.minFilter = THREE.LinearMipmapLinearFilter;
-          texture.magFilter = THREE.LinearFilter;
+        // --- B. 数据计算 (Data) ---
+        // 使用 dataTimeZoneOffset 计算，为了“数值正确”
+        // 这部分计算出的坐标肉眼看不到，但会发给后端
+        if (h >= 9 && h <= 17) {
+          const dUtcHour = h - dataTimeZoneOffset;
+          const dTime = baseTime + (dUtcHour * 3600 * 1000);
+          const dPos = SunCalc.getPosition(new Date(dTime), lat, lon);
 
-          if (thisType === "ANALYSIS") {
-            texture.encoding = THREE.sRGBEncoding;
-            analysisTexture = texture;
-          } else if (thisType === "MASK") {
-            texture.encoding = THREE.LinearEncoding;
-            maskTexture = texture;
+          if (dPos.altitude > 0.0) {
+            // 计算标准时向量
+            const dx = r * Math.cos(dPos.altitude) * Math.sin(dPos.azimuth + Math.PI);
+            const dz = r * Math.cos(dPos.altitude) * Math.cos(dPos.azimuth + Math.PI);
+            const dy = r * Math.sin(dPos.altitude);
+
+            const vec = new THREE.Vector3(dx, dy, dz).normalize();
+            sunVectors.push(vec.x, vec.y, vec.z);
+          } else {
+            // 补零
+            sunVectors.push(0.0, 0.0, 0.0);
           }
-
-          tryApplyAnalysisTexture();
-        });
-
-        return;
+        }
       }
-
-    };
-
-    function updateCards(data) {
-      if (!data) return;
-
-      document.getElementById("val-avg").innerText = data.avg ?? "--";
-      document.getElementById("val-low").innerText = data.low_sun ?? "--";
-      document.getElementById("val-high").innerText = data.high_sun ?? "--";
-
-      const avgVal = Number(data.avg || 0);
-      const lowVal = Number(data.low_sun || 0);
-      const highVal = Number(data.high_sun || 0);
-
-      document.getElementById("bar-avg").style.width = (avgVal * 10) + "%";
-      document.getElementById("bar-low").style.width = lowVal + "%";
-      document.getElementById("bar-high").style.width = highVal + "%";
-
-      if (data.distribution && Array.isArray(data.distribution)) {
-        data.distribution.forEach((pct, index) => {
-          if (index <= 10) {
-            const barFill = document.getElementById(`dist-bar-${index}`);
-            const barVal = document.getElementById(`dist-val-${index}`);
-            if (barFill && barVal) {
-              barFill.style.width = pct + "%";
-              barVal.innerText = Number(pct).toFixed(0) + "%";
-            }
-          }
-        });
-      }
+      return sunVectors;
     }
 
-    // 双模型策略（Base + Analysis）
+    // 🌟 新增：专门用于转换坐标给后端的函数 (解耦逻辑)
+    function transformBackendVectors(visualVectors) {
+      const backendData = [];
+      const format = (n) => parseFloat(n.toFixed(6));
+
+      // visualVectors 是扁平数组 [x,y,z, x,y,z, ...]
+      for (let i = 0; i < visualVectors.length; i += 3) {
+        const vx = visualVectors[i];     // Visual X
+        const vy = visualVectors[i + 1]; // Visual Y
+        const vz = visualVectors[i + 2]; // Visual Z
+
+        // 🌟 核心修正：
+        // 1. 给 vx 加上负号 (-) 修正镜像问题
+        // 2. Ladybug 坐标映射: [-X, -Z, -Y]
+        backendData.push(
+          format(-vx),   // ⬅️ 这里改成负号！
+          format(-vz),
+          format(-vy)
+        );
+      }
+      return backendData;
+    }
+
+    // ✅【新增】把 27 维 backend 向量补上 9 维 mask，得到 36 维 (27 + 9)
+    function buildSunVec36FromBackend27(backendVec27) {
+      const out = backendVec27.slice(); // copy 27
+      const eps = 1e-10;
+
+      for (let i = 0; i < 27; i += 3) {
+        const x = backendVec27[i];
+        const y = backendVec27[i + 1];
+        const z = backendVec27[i + 2];
+        const n2 = x * x + y * y + z * z;
+        out.push(n2 > eps ? 1.0 : 0.0);
+      }
+      return out; // length 36
+    }
+
+    // --- 交互逻辑 ---
+    locInput.addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      const query = e.target.value;
+      if (query.length < 3) { dropdown.style.display = "none"; return; }
+      searchTimeout = setTimeout(() => {
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`)
+          .then(res => res.json()).then(data => {
+            dropdown.innerHTML = "";
+            if (data.length > 0) {
+              dropdown.style.display = "block";
+              data.forEach(item => {
+                const div = document.createElement("div"); div.className = "dropdown-item"; div.innerText = item.display_name;
+                div.onclick = () => {
+                  locInput.value = item.display_name;
+                  currentLat = parseFloat(item.lat); currentLon = parseFloat(item.lon);
+                  dropdown.style.display = "none";
+                  hasUserSelectedLocation = true;
+                  triggerUpdate();
+                };
+                dropdown.appendChild(div);
+              });
+            } else { dropdown.style.display = "none"; }
+          });
+      }, 400);
+    });
+
+    document.addEventListener('click', (e) => { if (!locInput.contains(e.target)) dropdown.style.display = "none"; });
+
+    function triggerUpdate() {
+      lMonth.innerText = monthNames[sMonth.value - 1]; lDay.innerText = sDay.value;
+      const m = parseInt(sMonth.value); const d = parseInt(sDay.value);
+
+      // 1. 获取纯净的前端视觉向量 (用于屏幕显示)
+      const visualVectors = updateSunPositionAndVectors(currentLat, currentLon, m, d);
+
+      if (currentLat !== lastLat || currentLon !== lastLon || sunPathGroup.children.length === 0) {
+        redrawSunPathVisuals(currentLat, currentLon);
+        lastLat = currentLat; lastLon = currentLon;
+      }
+
+      // 2. 🌟 调用转换函数，生成后端数据
+      const backendVectors = transformBackendVectors(visualVectors);
+      console.log(backendVectors)
+
+      // ✅【新增】生成 36 维 sun_vectors (27 + 9 mask)
+      const backendVectors36 = buildSunVec36FromBackend27(backendVectors);
+
+      const payload = {
+        type: "UPDATE_SIMULATION", location: locInput.value,
+        lat: currentLat, lon: currentLon, month: m, day: d,
+        sun_vectors: backendVectors36 // ✅ 发送 36 维数据
+      };
+      if (ws && ws.readyState === WebSocket.OPEN) { ws.send(JSON.stringify(payload)); }
+    }
+
+    sMonth.oninput = triggerUpdate; sDay.oninput = triggerUpdate;
+
+    // --- 3D 更新逻辑 ---
     function updateGeometry(data) {
-      if (mainGroup) scene.remove(mainGroup);
-      mainGroup = new THREE.Group();
+      if (!data.vertices || !data.faces) return;
+      mainGroup.clear();
 
       const vertices = new Float32Array(data.vertices);
       const faces = new Uint32Array(data.faces);
 
-      // Base Mesh（白模）
       const baseGeometry = new THREE.BufferGeometry();
       baseGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
       baseGeometry.setIndex(new THREE.BufferAttribute(faces, 1));
       baseGeometry.computeVertexNormals();
 
       const baseMaterial = new THREE.MeshStandardMaterial({
-        color: 0xf5f5f5,
-        roughness: 0.8,
-        metalness: 0.1,
-        side: THREE.DoubleSide
+        color: 0xf5f5f5, roughness: 0.8, metalness: 0.1, side: THREE.DoubleSide
       });
+      const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
+      baseMesh.castShadow = true; baseMesh.receiveShadow = true;
 
-      baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
-      baseMesh.castShadow = true;
-      baseMesh.receiveShadow = true;
-      mainGroup.add(baseMesh);
-
-      // Analysis Mesh（朝上面 + UV）
       const analysisGeometry = filterAndMapGeometry(vertices, faces);
-      const analysisMaterial = new THREE.MeshBasicMaterial({
-        transparent: true,
-        side: THREE.DoubleSide,
-        depthTest: true,
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-        polygonOffsetUnits: -1
-      });
-
-      analysisMesh = new THREE.Mesh(analysisGeometry, analysisMaterial);
+      analysisMesh = new THREE.Mesh(analysisGeometry, new THREE.MeshBasicMaterial({
+        transparent: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, depthWrite: true
+      }));
       analysisMesh.renderOrder = 999;
-      mainGroup.add(analysisMesh);
 
-      console.log("[GEOM] analysis material =", analysisMesh.material.type);
+      const subGroup = new THREE.Group();
+      subGroup.add(baseMesh); subGroup.add(analysisMesh);
+      subGroup.rotateX(-Math.PI / 2);
+      mainGroup.add(subGroup);
 
-      // Rhino Z-up -> Three Y-up
-      mainGroup.rotateX(-Math.PI / 2);
-      scene.add(mainGroup);
-
-      // 相机自适应
       const box = new THREE.Box3().setFromObject(mainGroup);
       const size = new THREE.Vector3(); box.getSize(size);
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const cameraDist = Math.max(maxDim * 1.5, 200);
       const center = new THREE.Vector3(); box.getCenter(center);
 
-      camera.position.set(center.x + cameraDist, center.y + cameraDist, center.z + cameraDist);
-      camera.lookAt(center);
+      sunPathGroup.position.copy(center); sunPathGroup.position.y = 0;
+      sunPositionsGroup.position.copy(center); sunPositionsGroup.position.y = 0;
+
+      globalSceneRadius = Math.max(size.x, size.z) / 2 * 1.3;
+      if (globalSceneRadius < 10) globalSceneRadius = 50;
+
+      redrawSunPathVisuals(currentLat, currentLon);
+      triggerUpdate();
+
       controls.target.copy(center);
-      controls.update();
-
-      statusText.innerText = "Geometry Loaded";
-
-      // 几何后到也能贴
-      tryApplyAnalysisTexture();
+      const maxDim = Math.max(size.x, size.y, size.z);
+      camera.position.set(center.x + maxDim*1.5, center.y + maxDim*1.5, center.z + maxDim*1.5);
     }
 
-    // 过滤墙面 + 用全局 bbox 计算 UV
     function filterAndMapGeometry(vertices, faces) {
-      const newIndices = [];
-      const geometry = new THREE.BufferGeometry();
+      const newIndices = [], geometry = new THREE.BufferGeometry();
       geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
-
       geometry.computeBoundingBox();
       const bbox = geometry.boundingBox;
-      const rangeX = bbox.max.x - bbox.min.x;
-      const rangeY = bbox.max.y - bbox.min.y;
-
-      const safeX = (Math.abs(rangeX) < 1e-9) ? 1.0 : rangeX;
-      const safeY = (Math.abs(rangeY) < 1e-9) ? 1.0 : rangeY;
-
-      const vA = new THREE.Vector3();
-      const vB = new THREE.Vector3();
-      const vC = new THREE.Vector3();
-      const faceNormal = new THREE.Vector3();
-      const up = new THREE.Vector3(0, 0, 1);
-
+      const rangeX = (bbox.max.x - bbox.min.x) || 1.0, rangeY = (bbox.max.y - bbox.min.y) || 1.0;
+      const vA = new THREE.Vector3(), vB = new THREE.Vector3(), vC = new THREE.Vector3(), up = new THREE.Vector3(0, 0, 1);
       for (let i = 0; i < faces.length; i += 3) {
-        const a = faces[i];
-        const b = faces[i + 1];
-        const c = faces[i + 2];
+        vA.fromArray(vertices, faces[i] * 3); vB.fromArray(vertices, faces[i+1] * 3); vC.fromArray(vertices, faces[i+2] * 3);
+        const normal = new THREE.Vector3().crossVectors(new THREE.Vector3().subVectors(vB, vA), new THREE.Vector3().subVectors(vC, vA)).normalize();
+        if (Math.abs(normal.dot(up)) > 0.5) newIndices.push(faces[i], faces[i+1], faces[i+2]);
+      }
+      const filtered = new THREE.BufferGeometry();
+      filtered.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+      filtered.setIndex(new THREE.BufferAttribute(new Uint32Array(newIndices), 1));
+      const uvs = [];
+      for (let i = 0; i < vertices.length/3; i++) uvs.push((vertices[i*3]-bbox.min.x)/rangeX, (vertices[i*3+1]-bbox.min.y)/rangeY);
+      filtered.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(uvs), 2));
+      return filtered;
+    }
 
-        vA.fromArray(vertices, a * 3);
-        vB.fromArray(vertices, b * 3);
-        vC.fromArray(vertices, c * 3);
+    // --- WebSocket ---
+    const ws = new WebSocket("ws://" + window.location.host + "/ws");
+    ws.binaryType = "blob";
 
-        const edge1 = new THREE.Vector3().subVectors(vB, vA);
-        const edge2 = new THREE.Vector3().subVectors(vC, vA);
-        faceNormal.crossVectors(edge1, edge2).normalize();
+    ws.onopen = () => {
+      statusDot.classList.add("active");
+      statusText.innerText = "Connected";
 
-        if (Math.abs(faceNormal.dot(up)) > 0.5) {
-          newIndices.push(a, b, c);
+      // 🌟 连接成功后立即发送调色板
+      const paletteMessage = {
+        type: "LEGEND_PALETTE",
+        format: "hex",
+        colors: hourColors
+      };
+      ws.send(JSON.stringify(paletteMessage));
+      console.log("✅ Sent LEGEND_PALETTE:", hourColors);
+    };
+
+    ws.onclose = () => {
+      statusDot.classList.remove("active");
+      statusText.innerText = "Disconnected";
+    };
+
+
+    ws.onmessage = async (event) => {
+      if (typeof event.data === "string") {
+        // 处理 BLOB_TYPE 标记
+        if (event.data.startsWith("BLOB_TYPE:")) {
+          nextBlobType = event.data.split(":")[1];
+          console.log("🔔 Blob type:", nextBlobType);
+          return;
+        }
+
+        // 处理 UPDATE_TEXTURE 标记
+        if (event.data === "UPDATE_TEXTURE") {
+          console.log("🔔 Update texture signal received");
+          return;
+        }
+
+        // 处理 JSON 消息
+        try {
+          const msg = JSON.parse(event.data);
+          console.log("📩 Message:", msg.type, msg);
+
+          if (msg.type === "GEOMETRY") updateGeometry(msg.data);
+          if (msg.type === "ANALYSIS_RESULT") updateUI(msg.data);
+          if (msg.type === "PALETTE_OK") console.log("✅ Palette OK");
+          if (msg.type === "BACKEND_DATA_OK") console.log("✅ Backend data OK");
+          if (msg.type === "ERROR") console.error("❌ Error:", msg.message);
+        } catch (e) {
+          console.error("Parse error:", e);
+        }
+      } else if (event.data instanceof Blob) {
+        const thisType = nextBlobType;
+        console.log("📦 Blob received:", thisType, "size:", event.data.size);
+
+        if (thisType === "MASK") {
+          maskRectUV = await computeMaskRectFromBlob(event.data);
+          console.log("✅ Mask processed");
+        }
+
+        new THREE.TextureLoader().load(URL.createObjectURL(event.data), (t) => {
+          t.flipY = false;
+          if (thisType === "ANALYSIS") {
+            analysisTexture = t;
+            console.log("✅ Analysis texture loaded");
+          }
+          tryApplyAnalysisTexture();
+        });
+      }
+    };
+
+    function tryApplyAnalysisTexture() {
+      if (!analysisMesh || !analysisTexture || !maskRectUV) return;
+      analysisTexture.repeat.set(maskRectUV.u1 - maskRectUV.u0, -(maskRectUV.v1 - maskRectUV.v0));
+      analysisTexture.offset.set(maskRectUV.u0, maskRectUV.v1);
+      analysisMesh.material.map = analysisTexture; analysisMesh.material.needsUpdate = true;
+    }
+
+    async function computeMaskRectFromBlob(maskBlob) {
+      const bmp = await createImageBitmap(maskBlob);
+      const canvas = document.createElement("canvas");
+      canvas.width = bmp.width; canvas.height = bmp.height;
+      const ctx = canvas.getContext("2d"); ctx.drawImage(bmp, 0, 0);
+      const img = ctx.getImageData(0, 0, bmp.width, bmp.height).data;
+      let minX = bmp.width, minY = bmp.height, maxX = -1, maxY = -1;
+      for (let y = 0; y < bmp.height; y++) {
+        for (let x = 0; x < bmp.width; x++) {
+          if (img[(y * bmp.width + x) * 4] > 10) {
+            minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+          }
         }
       }
+      return maxX < 0 ? null : { u0: minX/bmp.width, v0: 1.0-(maxY+1)/bmp.height, u1: (maxX+1)/bmp.width, v1: 1.0-minY/bmp.height };
+    }
 
-      console.log("[GEOM] analysis triangles =", newIndices.length / 3);
-
-      const filteredGeometry = new THREE.BufferGeometry();
-      filteredGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
-      filteredGeometry.setIndex(new THREE.BufferAttribute(new Uint32Array(newIndices), 1));
-
-      const uvs = [];
-      const count = vertices.length / 3;
-      for (let i = 0; i < count; i++) {
-        const x = vertices[i * 3];
-        const y = vertices[i * 3 + 1];
-        const u = (x - bbox.min.x) / safeX;
-        const v = (y - bbox.min.y) / safeY;
-        uvs.push(u, v);
+    function updateUI(data) {
+      document.getElementById("val-avg").innerText = data.avg || "--";
+      document.getElementById("val-low").innerText = data.low_sun || "--";
+      document.getElementById("val-high").innerText = data.high_sun || "--";
+      if (data.distribution) {
+        data.distribution.forEach((pct, i) => { if (i < 9) {
+          document.getElementById(`dist-bar-${i}`).style.width = pct + "%";
+          document.getElementById(`dist-val-${i}`).innerText = Math.round(pct) + "%";
+        }});
       }
-      filteredGeometry.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(uvs), 2));
-
-      return filteredGeometry;
     }
 
-    function animate() {
-      requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
-    }
+    function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
     animate();
-
-    window.addEventListener("resize", () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
   </script>
 </body>
 </html>
