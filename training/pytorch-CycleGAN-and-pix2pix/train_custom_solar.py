@@ -7,10 +7,10 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
-from torchvision.transforms import InterpolationMode  # ✅ 新增：为了指定 Resize 插值方式
+from torchvision.transforms import InterpolationMode  # Required to specify Resize interpolation mode
 import torch.backends.cudnn as cudnn
 
-# ================= 配置区域 =================
+# ================= Configuration =================
 DATASET_ROOT = r"datasets/direct_sun_hours"
 JSON_FILE = "train_data_log.jsonl"
 CHECKPOINTS_BASE = r"checkpoints/solar_project"
@@ -23,19 +23,19 @@ L1_LAMBDA = 50.0
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# 条件向量：27(9x3 sun vectors) + 9(mask)
+# Condition vector: 27 (9x3 sun vectors) + 9 (hour masks)
 VEC_DIM = 36
 EMB_DIM = 128
 D_COND_CH = 16
 
-# ================= 1. 条件编码器 (9x3 + 9mask -> embedding) =================
+# ================= 1. Sun Condition Encoder (9x3 + 9mask -> embedding) =================
 class SunConditionEncoder(nn.Module):
     """
-    输入 vec: (B, 36) = [9x3 vectors, 9 masks]
-    输出 emb: (B, EMB_DIM)
+    Input vec: (B, 36) = [9x3 vectors, 9 masks]
+    Output emb: (B, EMB_DIM)
 
-    ✅ 关键改动：保留 9 个小时的顺序，不再 mean pooling
-    方案：per-vector -> (B,9,emb) -> mask -> flatten -> concat(mask, daylen) -> fuse
+    Key design: preserves the order of 9 hourly sun vectors (no mean pooling)
+    Strategy: per-vector MLP -> (B,9,emb) -> mask -> flatten -> concat(mask, daylen) -> fuse
     """
     def __init__(self, emb_dim=128):
         super().__init__()
@@ -49,7 +49,7 @@ class SunConditionEncoder(nn.Module):
             nn.LeakyReLU(0.2, True),
         )
 
-        # ✅ fuse 输入维度：9*emb_dim + 9(mask) + 1(daylen)
+        # Fuse input dim: 9*emb_dim + 9(mask) + 1(daylen)
         fuse_in = (9 * emb_dim) + 9 + 1
         self.fuse = nn.Sequential(
             nn.Linear(fuse_in, emb_dim),
@@ -65,14 +65,14 @@ class SunConditionEncoder(nn.Module):
         # per-vector embedding: (B,9,emb_dim)
         feat = self.per_vec(v)
 
-        # ✅ 保序：只 mask，不做平均
+        # Preserve order: apply mask without averaging
         feat = feat * m                         # (B,9,emb_dim)
         feat_flat = feat.reshape(feat.size(0), -1)      # (B, 9*emb_dim)
 
         # mask flat (B,9)
         mask_flat = m.view(m.size(0), 9)
 
-        # daylen (B,1) = 有效小时比例
+        # daylen (B,1) = ratio of valid (daytime) hours
         denom = mask_flat.sum(dim=1, keepdim=True).clamp(min=1.0)  # (B,1)
         daylen = denom / 9.0
 
@@ -102,7 +102,7 @@ class FiLMIN(nn.Module):
         beta = beta.view(b, c, 1, 1)
         return gamma * x + beta
 
-# ================= 3. 模型定义 (Generator: U-Net + multi-scale FiLM) =================
+# ================= 3. Generator (U-Net + multi-scale FiLM) =================
 class DownBlock(nn.Module):
     def __init__(self, in_c, out_c, emb_dim, use_norm=True):
         super().__init__()
@@ -195,7 +195,7 @@ class SolarGenerator(nn.Module):
 
         return self.last(d7)
 
-# ================= 4. 判别器定义 (Conditional PatchGAN) =================
+# ================= 4. Discriminator (Conditional PatchGAN) =================
 class ConditionalDiscriminator(nn.Module):
     def __init__(self, input_nc=6, vec_dim=VEC_DIM, emb_dim=EMB_DIM, cond_ch=D_COND_CH):
         super().__init__()
@@ -231,7 +231,7 @@ class ConditionalDiscriminator(nn.Module):
         inp = torch.cat([x, y, c], dim=1)
         return self.model(inp)
 
-# ================= 5. 数据处理 (256px 模式 + mask) =================
+# ================= 5. Dataset (256px mode + mask) =================
 class SolarDataset(Dataset):
     def __init__(self, root_dir, json_file):
         self.train_dir = os.path.join(root_dir, "train")
@@ -258,7 +258,9 @@ class SolarDataset(Dataset):
 
         self.image_files = [f for f in os.listdir(self.train_dir) if f.endswith('.png')]
 
-        # ✅ 关键改动：A 与 B 分开 Resize，A 用 NEAREST 保边界，B 用 BILINEAR 保平滑
+        # A and B use separate resize strategies:
+        # A (height map) → NEAREST to preserve hard boundaries
+        # B (radiation map) → BILINEAR for smooth gradients
         self.transform_A = transforms.Compose([
             transforms.ToPILImage(),
             transforms.Resize((256, 256), interpolation=InterpolationMode.NEAREST),
@@ -295,7 +297,7 @@ class SolarDataset(Dataset):
             "id": img_id
         }
 
-# ================= 6. 预览逻辑 =================
+# ================= 6. Visual preview =================
 def save_visuals(epoch, img_id, real_A, fake_B, real_B, img_dir):
     imgs = [("1_input", real_A), ("2_fake", fake_B), ("3_real", real_B)]
     for name, tensor in imgs:
@@ -320,7 +322,7 @@ def update_html(web_dir, img_dir):
                         f"<td><img src='images/{gid}_3_real.png' width='256'></td></tr>")
         f.write("</table></body></html>")
 
-# ================= 7. 训练函数 =================
+# ================= 7. Training loop =================
 def train():
     os.makedirs(CHECKPOINTS_BASE, exist_ok=True)
     WEB_DIR = os.path.join(CHECKPOINTS_BASE, "web")
@@ -342,16 +344,16 @@ def train():
     if os.path.exists(latest_g_path):
         try:
             netG.load_state_dict(torch.load(latest_g_path, map_location=DEVICE))
-            print("✅ 已加载 latest_G.pth")
+            print("[OK] Loaded latest_G.pth")
         except Exception as e:
-            print(f"⚠️ latest_G.pth 加载失败（结构已变更，建议从头训练）：{e}")
+            print(f"[Warning] Failed to load latest_G.pth (architecture may have changed; consider training from scratch): {e}")
 
     if os.path.exists(latest_d_path):
         try:
             netD.load_state_dict(torch.load(latest_d_path, map_location=DEVICE))
-            print("✅ 已加载 latest_D.pth")
+            print("[OK] Loaded latest_D.pth")
         except Exception as e:
-            print(f"⚠️ latest_D.pth 加载失败（结构已变更，建议从头训练）：{e}")
+            print(f"[Warning] Failed to load latest_D.pth (architecture may have changed; consider training from scratch): {e}")
 
     optG = optim.Adam(netG.parameters(), lr=LR, betas=(0.5, 0.999))
     optD = optim.Adam(netD.parameters(), lr=LR, betas=(0.5, 0.999))
@@ -366,7 +368,7 @@ def train():
     fixed_vec = fixed_batch["vec"].to(DEVICE)
     fixed_id = fixed_batch["id"][0]
 
-    print(f"🚀 256px 训练启动 (FiLM + Conditional D) | Batch: {BATCH_SIZE} | LR: {LR} | L1: {L1_LAMBDA} | vec_dim: {VEC_DIM}")
+    print(f"[Training] 256px run started (FiLM + Conditional D) | Batch: {BATCH_SIZE} | LR: {LR} | L1: {L1_LAMBDA} | vec_dim: {VEC_DIM}")
 
     for epoch in range(EPOCHS):
         for i, batch in enumerate(dataloader):
@@ -374,7 +376,7 @@ def train():
             real_B = batch['B'].to(DEVICE, non_blocking=True)
             vec = batch['vec'].to(DEVICE, non_blocking=True)
 
-            # 1) 更新 D
+            # 1) Update D
             optD.zero_grad(set_to_none=True)
 
             with torch.no_grad():
@@ -390,7 +392,7 @@ def train():
             loss_D.backward()
             optD.step()
 
-            # 2) 更新 G
+            # 2) Update G
             optG.zero_grad(set_to_none=True)
 
             fake_B = netG(real_A, vec)
@@ -406,7 +408,7 @@ def train():
             if i % 20 == 0:
                 print(f"E[{epoch:03d}] S[{i:04d}] LD:{loss_D.item():.4f} LG:{loss_G.item():.4f} (GAN:{loss_G_GAN.item():.4f} L1:{loss_G_L1.item():.4f})")
 
-        # 保存与可视化
+        # Save checkpoint and update visual preview
         if epoch % SAVE_EPOCH_FREQ == 0:
             netG.eval()
             with torch.no_grad():
@@ -423,7 +425,7 @@ def train():
             torch.save(netG.state_dict(), save_g)
             torch.save(netD.state_dict(), save_d)
 
-            print(f"✅ 已保存模型备份: {save_g} | {save_d}")
+            print(f"[OK] Checkpoint saved: {save_g} | {save_d}")
 
 if __name__ == "__main__":
     train()

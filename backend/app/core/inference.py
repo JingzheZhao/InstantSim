@@ -9,9 +9,9 @@ import sys
 import datetime
 from typing import List, Optional, Tuple, Dict, Any
 
-# 导入网络定义
+# Import network definitions
 try:
-    from app.models.networks import SolarGenerator  # 改用SolarGenerator
+    from app.models.networks import SolarGenerator
 except ImportError:
     sys.path.append(os.path.join(os.path.dirname(__file__), "../../"))
     from app.models.networks import SolarGenerator
@@ -19,26 +19,26 @@ except ImportError:
 
 class SolarPredictor:
     """
-    负责：
-    1) 接收高度图 + 太阳向量 (36维 = 27 vectors + 9 mask)
-    2) pix2pix 推理输出 analysis 图（模型输入 256x256）
-    3) 基于输入灰度语义生成 mask（背景255=无效）
-    4) 颜色重映射：从训练时的 9 色 -> 前端新配色
-    5) 使用前端传入的 legend palette（9色）在 Lab 空间做最近邻分类统计
+    Responsibilities:
+    1) Accept height map + sun vectors (36-dim = 27 vectors + 9 mask)
+    2) Run pix2pix inference to produce an analysis image (model input 256x256)
+    3) Build a valid-pixel mask from input semantics (background=255 is invalid)
+    4) Remap colors from the 9-class training palette to the frontend palette
+    5) Compute per-frame statistics in Lab color space using KNN classification
     """
 
-    # ✅ 统一尺寸：模型训练/推理输入
+    # Unified resolution for model training and inference
     MODEL_SIZE = 256
 
-    # ✅ 返回给前端的尺寸：Rhino 输入是 512，这里默认也返回 512，避免前端自己放大导致采样变糊
+    # Output resolution sent to frontend (matches Rhino input size; avoids blurry upsampling in the browser)
     FRONTEND_SIZE = 512
 
-    # ✅ 你如果希望前端直接拿 256，就把这个改成 False
+    # Set to False if you want the frontend to receive 256px directly
     UPSCALE_TO_FRONTEND_SIZE = True
 
     def __init__(self, model_path: Optional[str] = None, device: str = "cpu"):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"[InstantSim] AI 引擎启动... 设备: {self.device}", flush=True)
+        print(f"[InstantSim] AI engine starting... Device: {self.device}", flush=True)
 
         if model_path is None:
             current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -46,20 +46,20 @@ class SolarPredictor:
 
         self.model = self._load_model(model_path)
 
-        # ✅ 关键：推理端预处理要和训练一致
-        # - A 是高度图语义（离散/边界强），用 NEAREST 保边界
-        # - Normalize 到 [-1,1]（和训练一致）
+        # Preprocessing must match training:
+        # - Input A is a discrete height map with hard boundaries → NEAREST interpolation
+        # - Normalize to [-1, 1]
         self.transform = transforms.Compose([
             transforms.Resize((self.MODEL_SIZE, self.MODEL_SIZE), interpolation=InterpolationMode.NEAREST),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ])
 
-        # 太阳向量缓存（从前端接收）
+        # Sun vectors cache (received from frontend)
         self.sun_vectors = None
 
-        # --- 1. 训练时的原始配色 (严格匹配你的 9 小时训练图) ---
-        # 对应标注: 0, 1, 2, 3, 4, 6, 7, 8, 9
+        # --- 1. Original training palette (must strictly match the 9-hour training labels) ---
+        # Corresponds to hour labels: 0, 1, 2, 3, 4, 6, 7, 8, 9
         self.original_palette_hex = [
             "#0000ff", "#2e00d1", "#8500b3", "#bc0052", "#ff0000",
             "#ff4600", "#ff9100", "#ffc600", "#ffff00"
@@ -70,18 +70,18 @@ class SolarPredictor:
             cv2.COLOR_BGR2LAB
         ).reshape(9, 3).astype(np.float32)
 
-        # palette 由前端传入：9 色，对应 0..8 索引（新配色）
+        # Frontend-supplied palette: 9 colors, indices 0..8
         self.palette_bgr_u8: Optional[np.ndarray] = None  # shape (9,3) uint8 BGR
         self.palette_lab_f32: Optional[np.ndarray] = None  # shape (9,3) float32 Lab
 
-        # Debug 目录
+        # Debug output directory
         current_dir = os.path.dirname(os.path.abspath(__file__))
         self.debug_dir = os.path.join(current_dir, "../debug_outputs")
         os.makedirs(self.debug_dir, exist_ok=True)
 
     def _load_model(self, path: str):
         if not os.path.exists(path):
-            print(f"模型文件未找到: {path}", flush=True)
+            print(f"Model file not found: {path}", flush=True)
             return None
 
         net = SolarGenerator(
@@ -97,10 +97,10 @@ class SolarPredictor:
             net.load_state_dict(state_dict)
             net.to(self.device)
             net.eval()
-            print("模型加载成功！", flush=True)
+            print("Model loaded successfully.", flush=True)
             return net
         except Exception as e:
-            print(f"模型加载失败: {e}", flush=True)
+            print(f"Failed to load model: {e}", flush=True)
             return None
 
     @staticmethod
@@ -117,8 +117,8 @@ class SolarPredictor:
 
     def set_sun_vectors(self, vectors: List[float]) -> None:
         """
-        设置太阳向量（从前端接收 - Ladybug 坐标系）
-        vectors: 36 = 27 vectors + 9 mask
+        Set sun vectors received from the frontend (Ladybug coordinate system).
+        vectors: 36 = 27 directional floats + 9 hour mask flags
         """
         if len(vectors) != 36:
             raise ValueError(f"Sun vectors must have 36 elements (27 + 9 mask). Got: {len(vectors)}")
@@ -127,7 +127,7 @@ class SolarPredictor:
         vec36[27:] = (vec36[27:] > 0.5).astype(np.float32)
 
         self.sun_vectors = torch.tensor(vec36, dtype=torch.float32).to(self.device)
-        print(f"[后端] Sun vectors updated. len=36", flush=True)
+        print(f"[Backend] Sun vectors updated. len=36", flush=True)
 
     def set_palette_from_hex_list(self, hex_colors: List[str]) -> None:
         if len(hex_colors) != 9:
@@ -137,25 +137,25 @@ class SolarPredictor:
         self.palette_bgr_u8 = bgr
         lab = cv2.cvtColor(bgr.reshape(1, 9, 3), cv2.COLOR_BGR2LAB).reshape(9, 3).astype(np.float32)
         self.palette_lab_f32 = lab
-        print("[后端] Legend palette 已更新（来自前端）", flush=True)
+        print("[Backend] Legend palette updated from frontend.", flush=True)
 
     def _build_valid_mask_from_input(self, input_bgr: np.ndarray) -> np.ndarray:
         """
-        基于你的输入语义生成有效区域 mask：
-        - 背景=255（白） -> 无效
-        - 地面=240 + 建筑=0..195 -> 有效
+        Build a valid-pixel mask from input semantics:
+        - Background = 255 (white) → invalid
+        - Ground = 240, Buildings = 0..195 → valid
         """
         gray = cv2.cvtColor(input_bgr, cv2.COLOR_BGR2GRAY)
         valid = (gray != 255)
 
-        # 轻微腐蚀 1px：降低边缘抗锯齿/混色对统计的影响
+        # 1px erosion to reduce the influence of anti-aliased edge pixels on statistics
         kernel = np.ones((3, 3), np.uint8)
         valid = cv2.erode(valid.astype(np.uint8), kernel, iterations=1).astype(bool)
         return valid
 
     def _remap_colors(self, output_bgr: np.ndarray, valid_mask: np.ndarray) -> np.ndarray:
         if self.palette_bgr_u8 is None:
-            print("新配色未设置，跳过颜色重映射", flush=True)
+            print("Frontend palette not set; skipping color remapping.", flush=True)
             return output_bgr
 
         output_lab = cv2.cvtColor(output_bgr, cv2.COLOR_BGR2LAB).astype(np.float32)
@@ -172,18 +172,18 @@ class SolarPredictor:
         new_colors = self.palette_bgr_u8[nearest_indices]
         remapped_bgr[valid_mask] = new_colors
 
-        # 增强饱和度：只增强有效区域
+        # Boost saturation on valid pixels only
         remapped_hsv = cv2.cvtColor(remapped_bgr, cv2.COLOR_BGR2HSV).astype(np.float32)
         valid_hsv = remapped_hsv[valid_mask]
         valid_hsv[:, 1] = np.clip(valid_hsv[:, 1] * 1.4, 0, 255)
         remapped_hsv[valid_mask] = valid_hsv
         remapped_bgr = cv2.cvtColor(remapped_hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
 
-        print(f"颜色重映射完成（饱和度增强），处理了 {len(valid_pixels)} 个像素", flush=True)
+        print(f"Color remapping complete (saturation boost applied). Pixels processed: {len(valid_pixels)}", flush=True)
         return remapped_bgr
 
     def predict(self, image_bytes: bytes) -> Tuple[bytes, bytes, Dict[str, Any]]:
-        print("\n[后端] 收到预测请求！正在处理...", flush=True)
+        print("\n[Backend] Prediction request received. Processing...", flush=True)
 
         if self.model is None:
             return image_bytes, b"", {}
@@ -200,7 +200,7 @@ class SolarPredictor:
         if img_input_bgr is None:
             return image_bytes, b"", {}
 
-        # ✅ 2) resize input to MODEL_SIZE for inference + mask (保持训练一致)
+        # 2) Resize input to MODEL_SIZE for inference and mask generation (must match training)
         img_input_bgr_256 = cv2.resize(
             img_input_bgr,
             (self.MODEL_SIZE, self.MODEL_SIZE),
@@ -223,21 +223,21 @@ class SolarPredictor:
         output_bgr = np.clip(output_img, 0, 255).astype(np.uint8)
         output_bgr = cv2.cvtColor(output_bgr, cv2.COLOR_RGB2BGR)
 
-        # ✅ 6) build mask (基于 256 输入，保证尺寸对齐)
+        # 6) Build mask from 256px input to ensure spatial alignment
         valid_mask = self._build_valid_mask_from_input(img_input_bgr_256)
         mask_u8 = (valid_mask.astype(np.uint8) * 255)
 
-        # 7) 颜色重映射
+        # 7) Color remapping
         output_bgr_remapped = self._remap_colors(output_bgr, valid_mask)
 
-        # 8) stats（在 256 上算即可）
+        # 8) Compute statistics at 256px (sufficient resolution)
         stats = self._calculate_stats_discrete(output_bgr_remapped, valid_mask)
 
-        # 9) debug save（保存 256 版本）
+        # 9) Save debug outputs at 256px
         self._debug_save_files(output_bgr_remapped, img_input_bgr_256, mask_u8, output_bgr)
 
         # ✅ 10) encode outputs
-        # 默认返回给前端 512（NEAREST 放大，不糊边界）
+        # Default: upscale to 512px for the frontend (NEAREST to preserve hard edges)
         out_send = output_bgr_remapped
         mask_send = mask_u8
 
@@ -267,7 +267,7 @@ class SolarPredictor:
 
             valid_pixels = filtered_lab[valid_mask]
             if valid_pixels.size == 0:
-                print("没有有效像素", flush=True)
+                print("No valid pixels found.", flush=True)
                 return {"avg": 0, "low_sun": 0, "high_sun": 0, "distribution": [], "debug_pixels": [],
                         "total_valid_pixels": 0}
 
@@ -307,7 +307,7 @@ class SolarPredictor:
             }
 
         except Exception as e:
-            print(f"计算出错: {e}", flush=True)
+            print(f"Statistics computation failed: {e}", flush=True)
             return {"avg": 0, "low_sun": 0, "high_sun": 0, "distribution": [], "debug_pixels": [],
                     "total_valid_pixels": 0}
 
@@ -319,6 +319,6 @@ class SolarPredictor:
             cv2.imwrite(os.path.join(self.debug_dir, "debug_mask.png"), mask_u8)
             if original_output is not None:
                 cv2.imwrite(os.path.join(self.debug_dir, "debug_ai_output_original.png"), original_output)
-            print(f"Debug 图片已保存到: {self.debug_dir}", flush=True)
+            print(f"Debug images saved to: {self.debug_dir}", flush=True)
         except Exception as e:
-            print(f"Debug 保存失败: {e}", flush=True)
+            print(f"Failed to save debug images: {e}", flush=True)

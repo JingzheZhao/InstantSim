@@ -2,14 +2,14 @@ import torch
 import torch.nn as nn
 
 
-# ================= 1. 条件编码器 =================
+# ================= 1. Sun Condition Encoder =================
 class SunConditionEncoder(nn.Module):
     """
-    checkpoint 对应的版本：
-    - 保留 9 个小时的顺序
-    - 输入 vec: (B,36) = [9x3 vectors, 9 masks]
-    - 输出 emb: (B, emb_dim)
-    fuse 输入维度 = 9*emb_dim + 9(mask) + 1(daylen)
+    Matches the checkpoint architecture:
+    - Preserves the order of 9 hourly sun vectors
+    - Input vec: (B, 36) = [9x3 vectors, 9 masks]
+    - Output emb: (B, emb_dim)
+    - Fuse input dim = 9*emb_dim + 9(mask) + 1(daylen)
     """
     def __init__(self, emb_dim=128):
         super().__init__()
@@ -37,19 +37,19 @@ class SunConditionEncoder(nn.Module):
         # (B,9,emb)
         feat = self.per_vec(v)
 
-        # 保序：展平成 (B, 9*emb)
+        # Preserve order: flatten to (B, 9*emb)
         feat_flat = feat.reshape(feat.size(0), -1)
 
         # daylen: (B,1)
         daylen = (m01.sum(dim=1, keepdim=True).clamp(min=1.0) / 9.0)
 
-        # 拼接：9*emb + 9(mask) + 1(daylen)
+        # Concatenate: 9*emb + 9(mask) + 1(daylen)
         x = torch.cat([feat_flat, m01, daylen], dim=1)
         return self.fuse(x)
 
 
 
-# ================= 2. FiLM 层 =================
+# ================= 2. FiLM Layer =================
 class FiLMIN(nn.Module):
     def __init__(self, num_features, emb_dim):
         super().__init__()
@@ -68,7 +68,7 @@ class FiLMIN(nn.Module):
         return gamma * x + beta
 
 
-# ================= 3. U-Net 子模块 =================
+# ================= 3. U-Net Sub-modules =================
 class DownBlock(nn.Module):
     def __init__(self, in_c, out_c, emb_dim, use_norm=True):
         super().__init__()
@@ -102,7 +102,7 @@ class UpBlock(nn.Module):
         return x
 
 
-# ================= 4. 生成器主类 =================
+# ================= 4. Generator =================
 class SolarGenerator(nn.Module):
     def __init__(self, input_nc=3, output_nc=3, vec_dim=36, emb_dim=128):
         super().__init__()

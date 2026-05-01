@@ -8,7 +8,7 @@ import os
 import json
 from typing import Any, Dict, Optional
 
-# 尝试导入推理引擎
+# Try importing the inference engine
 try:
     from app.core.inference import SolarPredictor
 except ImportError:
@@ -17,11 +17,11 @@ except ImportError:
     sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
     from app.core.inference import SolarPredictor
 
-# --- 全局变量 ---
+# --- Global state ---
 ml_models: Dict[str, Any] = {}
 
 
-# --- WebSocket 连接管理器 ---
+# --- WebSocket Connection Manager ---
 class ConnectionManager:
     def __init__(self):
         self.active_connections: list[WebSocket] = []
@@ -29,12 +29,12 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.append(websocket)
-        print(f"[WS] 新客户端连接。当前连接数: {len(self.active_connections)}")
+        print(f"[WS] New client connected. Active connections: {len(self.active_connections)}")
 
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
-            print(f"[WS] 客户端断开。剩余连接数: {len(self.active_connections)}")
+            print(f"[WS] Client disconnected. Remaining connections: {len(self.active_connections)}")
 
     async def broadcast(self, message: str):
         for connection in list(self.active_connections):
@@ -54,21 +54,22 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-# --- 核心辅助函数：执行推理并广播结果 ---
+# --- Core helper: run inference and broadcast results ---
 async def run_inference_and_broadcast(image_bytes: bytes):
     """
-    封装推理流程，供 HTTP 请求和 WebSocket 自动重算共用
+    Encapsulates the full inference pipeline, shared by HTTP requests
+    and WebSocket-triggered re-computations on cached images.
     """
     predictor = ml_models.get("predictor")
-    # 检查系统状态
+    # Check system readiness
     if not (predictor and ml_models.get("palette_ready") and ml_models.get("sun_vectors_ready")):
         return None, None, None
 
     try:
-        # 执行推理
+        # Run inference
         analysis_bytes, mask_bytes, stats = predictor.predict(image_bytes)
 
-        # 按照前端要求的严格顺序广播
+        # Broadcast in the strict order required by the frontend
         await manager.broadcast("UPDATE_TEXTURE")
         await manager.broadcast("BLOB_TYPE:ANALYSIS")
         await manager.broadcast_bytes(analysis_bytes)
@@ -78,11 +79,11 @@ async def run_inference_and_broadcast(image_bytes: bytes):
 
         return analysis_bytes, mask_bytes, stats
     except Exception as e:
-        print(f"[Error] 推理或广播失败: {e}")
+        print(f"[Error] Inference or broadcast failed: {e}")
         return None, None, None
 
 
-# --- 生命周期管理 ---
+# --- Application lifecycle ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -92,11 +93,11 @@ async def lifespan(app: FastAPI):
 
     try:
         predictor = SolarPredictor(model_path=model_path)
-        predictor.debug_dir = debug_dir  # 传递目录给推理引擎
+        predictor.debug_dir = debug_dir  # Pass debug directory to inference engine
         ml_models["predictor"] = predictor
         ml_models["palette_ready"] = False
         ml_models["sun_vectors_ready"] = False
-        ml_models["last_image"] = None  # 🌟 用于缓存 Grasshopper 发来的最后一张图
+        ml_models["last_image"] = None  # Cache for the last image received from Grasshopper
         print("[System] Model and Debug environment ready.")
     except Exception as e:
         print(f"[Critical] Initialization failed: {e}")
@@ -120,7 +121,7 @@ class GeometryPayload(BaseModel):
     faces: list
 
 
-# --- 1) WebSocket 路由 ---
+# --- 1) WebSocket route ---
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
@@ -132,17 +133,17 @@ async def websocket_endpoint(websocket: WebSocket):
             except:
                 continue
 
-            # 处理调色板
+            # Handle legend palette
             if msg.get("type") == "LEGEND_PALETTE":
                 predictor = ml_models.get("predictor")
                 colors = msg.get("colors", [])
-                if predictor and len(colors) == 9:  # 适配 9 小时模型
+                if predictor and len(colors) == 9:  # 9-hour model
                     predictor.set_palette_from_hex_list(colors)
                     ml_models["palette_ready"] = True
                     await websocket.send_text(json.dumps({"type": "PALETTE_OK"}))
                     print("[System] Palette ready.")
 
-            # 🌟 处理太阳向量更新 (前端拖动滑块)
+            # Handle sun vector update (triggered by frontend slider)
             elif msg.get("type") == "UPDATE_SIMULATION":
                 predictor = ml_models.get("predictor")
                 backend_data = msg.get("sun_vectors") or msg.get("backendData")
@@ -152,9 +153,9 @@ async def websocket_endpoint(websocket: WebSocket):
                     ml_models["sun_vectors_ready"] = True
                     await websocket.send_text(json.dumps({"type": "BACKEND_DATA_OK"}))
 
-                    # ✅ 成功更新向量后，再用缓存图片立即重算
+                    # Re-run inference with cached image after sun vectors are updated
                     if ml_models.get("last_image"):
-                        print("[System] 收到新向量，正在使用缓存图片实时重算...")
+                        print("[System] New sun vectors received. Re-computing with cached image...")
                         await run_inference_and_broadcast(ml_models["last_image"])
                 else:
                     await websocket.send_text(json.dumps({
@@ -169,44 +170,44 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-# --- 2) 预测接口 (由 Grasshopper 触发) ---
+# --- 2) Predict endpoint (triggered by Grasshopper) ---
 @app.post("/predict")
 async def predict_endpoint(file: UploadFile = File(...)):
-    print(f"\n======== 收到 Grasshopper 推送: {file.filename} ========")
+    print(f"\n======== Received Grasshopper push: {file.filename} ========")
 
-    # 读取并缓存图片
+    # Read and cache the image
     contents = await file.read()
     ml_models["last_image"] = contents
 
-    # 状态检查
+    # Check system readiness
     if not (ml_models.get("predictor") and ml_models.get("palette_ready") and ml_models.get("sun_vectors_ready")):
-        print("❌ [拒绝请求] 系统状态未就绪")
+        print("[Rejected] System not ready.")
         return JSONResponse(status_code=400, content={"error": "System not ready"})
 
-    # 执行推理并发给前端
+    # Run inference and broadcast to frontend
     analysis_bytes, _, stats = await run_inference_and_broadcast(contents)
 
     if analysis_bytes:
-        print(f"✅ 推理成功并发回前端. Stats: {stats}")
+        print(f"[OK] Inference succeeded. Stats: {stats}")
         return Response(content=analysis_bytes, media_type="image/png")
     else:
         return JSONResponse(status_code=500, content={"error": "Inference failed"})
 
 
-# --- 3) 模型同步接口 ---
+# --- 3) Geometry sync endpoint ---
 @app.post("/sync_model")
 async def sync_model_endpoint(payload: GeometryPayload):
-    print(f"[Sync] 几何体同步: {len(payload.vertices) // 3} 顶点")
+    print(f"[Sync] Geometry sync: {len(payload.vertices) // 3} vertices")
     await manager.broadcast(json.dumps({"type": "GEOMETRY", "data": payload.model_dump()}))
     return {"status": "synced"}
 
 
-# --- 4) 静态文件挂载 (修正作用域) ---
+# --- 4) Static file mount ---
 current_dir_global = os.path.dirname(os.path.abspath(__file__))
 frontend_path = os.path.normpath(os.path.join(current_dir_global, "../frontend"))
 if os.path.exists(frontend_path):
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
-    print(f"[System] 托管前端于: {frontend_path}")
+    print(f"[System] Serving frontend from: {frontend_path}")
 
 if __name__ == "__main__":
     import uvicorn

@@ -63,7 +63,7 @@ def write_test_html(web_dir, results):
             f.write(f"<tr><td>{img_id}</td><td><img src='images/result_{img_id}.png'></td></tr>")
         f.write("</table></body></html>")
 
-# ✅ 和训练一致：A 用 NEAREST，B 本来只是展示/对比，Resize 用 BILINEAR 更合理
+# Consistent with training: A uses NEAREST; B is display-only so BILINEAR is fine
 transform_A = transforms.Compose([
     transforms.Resize((256, 256), interpolation=InterpolationMode.NEAREST),
     transforms.ToTensor(),
@@ -79,7 +79,7 @@ transform_B = transforms.Compose([
 test_files = sorted([f for f in os.listdir(TEST_DATA_DIR) if f.endswith(".png")])
 processed_ids = []
 
-print("🚀 开始生成 Web 测试报告...")
+print("[Validation] Generating web test report...")
 with torch.no_grad():
     for img_name in test_files:
         img_id = img_name.split(".")[0]
@@ -99,7 +99,7 @@ with torch.no_grad():
             img = ((t[0].cpu().numpy().transpose(1, 2, 0) * 0.5 + 0.5) * 255).astype(np.uint8)
             return cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-        # 仅用于展示：输入A、真值B都 resize 到 256
+        # For display only: resize input A and ground truth B to 256
         img_A = cv2.resize(cv2.cvtColor(real_A, cv2.COLOR_RGB2BGR), (256, 256), interpolation=cv2.INTER_NEAREST)
         img_Fake = tensor_to_img(fake_B_tensor)
         img_Real = cv2.resize(cv2.cvtColor(real_B, cv2.COLOR_RGB2BGR), (256, 256), interpolation=cv2.INTER_LINEAR)
@@ -109,4 +109,4 @@ with torch.no_grad():
         processed_ids.append(img_id)
 
 write_test_html(TEST_WEB_DIR, processed_ids)
-print(f"🎉 测试报告已生成！请打开查看: {os.path.abspath(os.path.join(TEST_WEB_DIR, 'index.html'))}")
+print(f"[Done] Test report generated. Open: {os.path.abspath(os.path.join(TEST_WEB_DIR, 'index.html'))}")
