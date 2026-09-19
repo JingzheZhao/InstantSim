@@ -33,7 +33,7 @@ InstantSim follows a classic **B/S (Browser/Server) + Agent** architecture with 
 ┌─────────────────────┐
 │   FastAPI Backend   │  Core Layer (Computation)
 │  + PyTorch Engine   │
-│  + Docker Container │
+│  + Uvicorn server   │
 └──────────┬──────────┘
            │ WebSocket Broadcast
            ▼
@@ -52,7 +52,7 @@ InstantSim follows a classic **B/S (Browser/Server) + Agent** architecture with 
 - Data transmission
 
 **2. Computation Service Layer (The Core)**
-- Python backend in Docker
+- Python backend served by Uvicorn
 - Image preprocessing
 - AI inference (PyTorch)
 - Post-processing & artifact removal
@@ -395,10 +395,9 @@ analysisTexture.offset.set(u0, v1);         // Start from top
    └─> Export final .pth weights
 
 3. DEPLOYMENT
-   ├─> Dockerize FastAPI backend
-   ├─> Mount model weights as volume
-   ├─> Environment variable configuration
-   └─> Docker Compose orchestration
+   ├─> Uvicorn serving FastAPI and the dashboard
+   ├─> Model weights loaded at startup
+   └─> Environment variable configuration
 
 4. MONITORING
    ├─> Log inference times
@@ -406,65 +405,18 @@ analysisTexture.offset.set(u0, v1);         // Start from top
    └─> User feedback collection
 ```
 
-### Docker Architecture
+### Deployment
 
-**Dockerfile Strategy**:
-```dockerfile
-# Multi-stage build for smaller image
-FROM python:3.9-slim AS base
+The backend is run directly with Uvicorn:
 
-# Layer 1: System dependencies
-RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
-    libglib2.0-0
-
-# Layer 2: Python dependencies (cached)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Layer 3: Application code
-COPY . /app
-WORKDIR /app
-
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```bash
+cd backend
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-**Volume Mounts**:
-```yaml
-# docker-compose.yml
-volumes:
-  - ./models:/app/models          # Model weights
-  - ./debug:/app/debug            # Debug outputs
-  - ./data/snapshots:/app/data    # Version control
-```
-
-### CI/CD Pipeline (Conceptual)
-
-```yaml
-# .github/workflows/ci.yml
-name: CI/CD Pipeline
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Lint
-        run: flake8 .
-      - name: Unit Tests
-        run: pytest tests/
-  
-  build:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Build Docker Image
-        run: docker build -t instantsim:latest .
-      - name: Push to Registry
-        run: docker push instantsim:latest
-```
+The model weights are loaded once at startup and the single-file dashboard is
+served by the same process. Containerization, CI and registry publishing are
+not implemented; they are listed under future enhancements.
 
 ---
 
@@ -476,7 +428,6 @@ jobs:
 - Sanitize filenames
 
 **2. Resource Limits**
-- Docker memory limits (e.g., 2GB)
 - Request rate limiting (100 req/hour)
 - WebSocket connection limits
 

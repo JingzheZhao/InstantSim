@@ -22,7 +22,6 @@ This guide covers setting up your development environment, training the model, a
 - Python 3.9 or higher
 - pip or conda
 - Git
-- Docker (optional, for containerized development)
 - Rhino 7+ with Grasshopper (for data generation)
 
 ### Clone Repository
@@ -544,28 +543,6 @@ console.time('render');
 renderer.render(scene, camera);
 console.timeEnd('render');
 ```
-
----
-
-## Docker Development
-
-### Build Development Image
-
-```bash
-docker build -t instantsim:dev -f Dockerfile.dev .
-```
-
-### Run with Volume Mounts
-
-```bash
-docker run -it --rm \
-    -v $(pwd)/app:/app/app \
-    -v $(pwd)/models:/app/models \
-    -p 8000:8000 \
-    instantsim:dev
-```
-
-This enables hot-reloading during development.
 
 ---
 

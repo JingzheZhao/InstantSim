@@ -49,15 +49,6 @@ sudo apt-get update
 sudo apt-get install -y libgl1-mesa-glx libglib2.0-0
 ```
 
-**Solution** (Docker):
-Add to Dockerfile:
-```dockerfile
-RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
-```
-
 ### FastAPI Port Already in Use
 
 **Problem**: `Address already in use: Port 8000`
@@ -534,15 +525,6 @@ if os.environ.get("DEBUG") != "1":
     return  # Skip debug saving
 ```
 
-3. Use Docker memory limits:
-```yaml
-# docker-compose.yml
-services:
-  backend:
-    mem_limit: 2g
-    mem_reservation: 1g
-```
-
 ### Laggy Frontend
 
 **Problem**: 3D rendering stutters or drops frames.
@@ -580,71 +562,13 @@ lod.addLevel(lowDetailMesh, 100);
 
 ---
 
-## Docker Issues
-
-### Container Fails to Start
-
-**Problem**: `docker-compose up` exits immediately.
-
-**Diagnostic**:
-```bash
-docker-compose logs backend
-```
-
-**Common Errors**:
-
-1. **Port conflict**:
-```yaml
-# Change port in docker-compose.yml
-ports:
-  - "8001:8000"  # Use 8001 instead
-```
-
-2. **Missing model file**:
-```yaml
-# Mount model directory
-volumes:
-  - ./models:/app/models
-```
-
-3. **Permission issues**:
-```bash
-# Fix file permissions
-chmod -R 755 backend/
-```
-
-### Cannot Access Container from Host
-
-**Problem**: `curl localhost:8000` fails.
-
-**Solution**:
-
-1. Check port mapping:
-```bash
-docker ps  # Verify port 8000 is mapped
-```
-
-2. Use host network (Linux only):
-```yaml
-network_mode: "host"
-```
-
-3. Check firewall:
-```bash
-sudo ufw status
-sudo ufw allow 8000
-```
-
----
-
 ## Getting More Help
 
 If your issue isn't listed here:
 
 1. **Check logs**:
 ```bash
-# Backend
-docker-compose logs -f backend
+# Backend: the Uvicorn process prints inference logs to stdout
 
 # Browser
 Open DevTools → Console tab

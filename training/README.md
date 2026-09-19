@@ -31,6 +31,13 @@ pip install torch torchvision opencv-python numpy
 python training/train_custom_solar.py
 ```
 
+`validate_model.py` imports the generator from the backend package, so run it
+with that package on the path:
+
+```bash
+PYTHONPATH=backend python training/validate_model.py
+```
+
 Paths, batch size, learning rate and epoch count are set at the top of
 `train_custom_solar.py`. Training details and the validation procedure are
 documented in [../docs/development.md](../docs/development.md).
