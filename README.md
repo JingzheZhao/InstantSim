@@ -201,9 +201,10 @@ pip install -r requirements.txt
 
 ### 3. Place the model weights
 
-The trained weights (about 240 MB) are not tracked in this repository. They are
-published as an asset on the [releases page](https://github.com/JingzheZhao/InstantSim/releases).
-Download `city_sun_model.pth` and place it at:
+The trained weights (229 MB) are not tracked in this repository. Download
+[city_sun_model.pth](https://github.com/JingzheZhao/InstantSim/releases/download/V1.0.0/city_sun_model.pth)
+from the [v1.0.0 release](https://github.com/JingzheZhao/InstantSim/releases/tag/V1.0.0)
+and place it at:
 
 ```
 backend/app/models/city_sun_model.pth
