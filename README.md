@@ -32,7 +32,7 @@ Traditional building physics simulations (Ladybug/Honeybee, EnergyPlus, OpenFOAM
 > 🎬 **[Watch the full demo on YouTube →](https://www.youtube.com/watch?v=3uCVHuaowtU&t=8s)**
 
 <p align="center">
-  <img src="docs/demo.gif" width="720" alt="Geometry edits in Rhino update the predicted solar exposure map in the browser" />
+  <img src="docs/demo.png" width="760" alt="A raycasted height map on the left and the predicted nine-class solar exposure map on the right" />
 </p>
 
 ### Key Capabilities
