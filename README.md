@@ -31,6 +31,10 @@ Traditional building physics simulations (Ladybug/Honeybee, EnergyPlus, OpenFOAM
 
 > 🎬 **[Watch the full demo on YouTube →](https://www.youtube.com/watch?v=3uCVHuaowtU&t=8s)**
 
+<p align="center">
+  <img src="docs/demo.gif" width="720" alt="Geometry edits in Rhino update the predicted solar exposure map in the browser" />
+</p>
+
 ### Key Capabilities
 
 - **~100ms inference** from height map to color-coded solar heat map

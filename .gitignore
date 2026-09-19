@@ -39,8 +39,7 @@ Thumbs.db
 *.rhl
 *.epw
 
-# images, except documentation assets
-*.png
-!assets/*.png
-!images/*.png
+# Documentation images
 !docs/*.png
+!docs/*.gif
+!docs/*.jpg
