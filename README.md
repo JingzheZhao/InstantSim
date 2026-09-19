@@ -10,7 +10,6 @@
   <img src="https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?style=flat-square&logo=pytorch&logoColor=white" />
   <img src="https://img.shields.io/badge/FastAPI-0.104-009688?style=flat-square&logo=fastapi&logoColor=white" />
   <img src="https://img.shields.io/badge/Three.js-r158-black?style=flat-square&logo=threedotjs&logoColor=white" />
-  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white" />
   <img src="https://img.shields.io/badge/Python-3.9+-3776AB?style=flat-square&logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" />
 </p>
@@ -59,7 +58,7 @@ InstantSim follows a three-layer **Edge → Core → View** architecture:
 │  FastAPI Backend         │  ← Core Layer
 │  · SolarGenerator (AI)   │    PyTorch inference
 │  · WebSocket broadcast   │    OpenCV post-processing
-│  · Docker container      │    Async event loop
+│  · Async event loop      │    Debug image logging
 └────────────┬─────────────┘
              │  WS broadcast  (binary blobs + JSON)
              ▼
@@ -117,7 +116,7 @@ This conditioning mechanism is applied at **all 14 encoder/decoder blocks**, all
 
 | Parameter | Value |
 |-----------|-------|
-| Dataset | 1,000+ synthetic Ladybug-generated pairs |
+| Dataset | 6,000+ synthetic Ladybug-generated pairs |
 | Input | Raycasted height maps (grayscale → RGB replicated) |
 | Label | Annual radiation maps (9-hour color-coded) |
 | Augmentation | Random rotation, horizontal/vertical flip, brightness jitter |
@@ -142,14 +141,13 @@ This conditioning mechanism is applied at **all 14 encoder/decoder blocks**, all
 | **Frontend** | Three.js | 3D scene, UV texture mapping |
 | **Charts** | ECharts | Real-time solar statistics dashboard |
 | **Communication** | WebSocket | Bidirectional binary + JSON streaming |
-| **Containerization** | Docker + Compose | Portable, reproducible deployment |
 
 ---
 
 ## Project Structure
 
 ```
-instantsim/
+InstantSim/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py                  # FastAPI app, WebSocket manager, lifecycle
@@ -157,22 +155,24 @@ instantsim/
 │   │   │   └── inference.py         # SolarPredictor: preprocessing, inference,
 │   │   │                            #   post-processing, color remapping, stats
 │   │   └── models/
-│   │       └── networks.py          # SolarGenerator, SunConditionEncoder, FiLM
+│   │       ├── networks.py          # SolarGenerator, SunConditionEncoder, FiLM
+│   │       └── city_sun_model.pth   # trained weights (not in the repo, see below)
+│   ├── frontend/
+│   │   └── index.html               # Three.js dashboard (single-file SPA)
 │   └── requirements.txt
-├── frontend/
-│   └── index.html                   # Three.js dashboard (single-file SPA)
 ├── training/
-│   └── pytorch-CycleGAN-and-pix2pix/
-│       ├── train_custom_solar.py    # Custom training script with FiLM support
-│       ├── validate_model.py        # Inference validation utilities
-│       └── models/
-│           └── networks.py          # SolarGenerator (training copy)
+│   ├── README.md                    # data layout and how to run training
+│   ├── train_custom_solar.py        # model, dataset and training loop
+│   └── validate_model.py            # inference validation utilities
+├── gh_scripts/
+│   ├── data-generator.gh            # Grasshopper data generation definition
+│   └── model.3dm                    # sample Rhino scene
+├── scripts/
+│   └── rename_dataset.py            # dataset file renaming helper
 ├── docs/
-│   ├── architecture.md              # Full system design document
-│   ├── development.md               # Dev environment & training guide
-│   └── troubleshooting.md           # Common issues & fixes
-├── Dockerfile
-├── docker-compose.yml
+│   ├── architecture.md              # full system design document
+│   ├── development.md               # dev environment and training guide
+│   └── troubleshooting.md           # common issues and fixes
 └── README.md
 ```
 
@@ -183,46 +183,39 @@ instantsim/
 ### Prerequisites
 
 - Python 3.9+
-- Docker & Docker Compose (recommended)
 - Rhino 7+ with Grasshopper (for live geometry input)
 
-### 1. Clone the Repository
+### 1. Clone the repository
 
 ```bash
-git clone https://github.com/jingzhezhao/instantsim.git
-cd instantsim
+git clone https://github.com/JingzheZhao/InstantSim.git
+cd InstantSim
 ```
 
-### 2. Set Up the Backend
+### 2. Set up the backend
 
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-### 3. Place Model Weights
+### 3. Place the model weights
 
-Download the pre-trained weights and place them at:
+The trained weights (about 240 MB) are not tracked in this repository. Download
+`city_sun_model.pth` and place it at:
 
 ```
 backend/app/models/city_sun_model.pth
 ```
 
-### 4. Run the Development Server
+### 4. Run the server
 
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Navigate to `http://localhost:8000` — the Three.js dashboard is served directly from the backend.
-
-### Docker (Recommended for Production)
-
-```bash
-docker-compose up -d
-```
-
-The full stack spins up at `http://localhost:8000`. Model weights are mounted as a Docker volume — no rebuild required when updating the model.
+Navigate to `http://localhost:8000`. The Three.js dashboard is served directly
+from the backend.
 
 ---
 
@@ -349,18 +342,18 @@ All statistics are computed in **CIE Lab color space** using nearest-neighbor cl
 
 ```
 DATA COLLECTION
-  └─ Grasshopper automation → 1,000+ height map + radiation map pairs
+  └─ Grasshopper automation → 6,000+ height map + radiation map pairs
   └─ Preprocessing: resize, normalize, augment (rotation/flip/brightness)
 
-TRAINING  (training/pytorch-CycleGAN-and-pix2pix/)
+TRAINING  (training/)
   └─ Custom pix2pix loop with sun vector conditioning
   └─ 80/20 train/validation split
   └─ Checkpoint saved every 10 epochs → best validation checkpoint selected
   └─ Final export: city_sun_model.pth
 
 DEPLOYMENT
-  └─ Docker multi-stage build (python:3.9-slim base)
-  └─ Model weights mounted as volume (no rebuild on model update)
+  └─ Uvicorn serving the FastAPI app and the single-file dashboard
+  └─ Model weights loaded once at startup
   └─ CORS-open for local Grasshopper → backend → browser pipeline
 
 MONITORING
@@ -378,7 +371,6 @@ MONITORING
 - [x] FastAPI backend with async WebSocket broadcast
 - [x] Lab-space color remapping system
 - [x] Three.js 3D heat map with UV texture streaming
-- [x] Docker containerization
 - [x] Real-time re-simulation on sun vector update
 
 ### In Progress / Planned
@@ -387,7 +379,6 @@ MONITORING
 - [ ] Design version control (Git-like snapshot & diff viewer)
 - [ ] Wind/CFD analysis module (second pix2pix head)
 - [ ] PDF report export
-- [ ] Kubernetes deployment + Prometheus metrics
 - [ ] Revit API integration (BIM workflow)
 
 ---
@@ -411,6 +402,24 @@ See [docs/architecture.md](docs/architecture.md) for:
 ## Contributing
 
 Contributions, issues, and feature requests are welcome. Please open an issue first to discuss what you'd like to change.
+
+---
+
+## Training
+
+The training script in `training/` is self-contained PyTorch: it defines the
+model, the dataset and the training loop. See
+[training/README.md](training/README.md) for the data layout and how to run it.
+
+---
+
+## License and third-party code
+
+This project is released under the MIT License (see [LICENSE](LICENSE)).
+
+The conditional generator follows the pix2pix formulation of Isola et al.
+(2017); the reference implementation by Jun-Yan Zhu and Taesung Park is
+distributed under its own BSD license and is not included in this repository.
 
 ---
 

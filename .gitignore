@@ -1,27 +1,46 @@
+# datasets and training artifacts
 dataset/
 datasets/
 checkpoints/
 results/
+wandb/
+*.pth
+
+# vendored training framework (installed separately, see training/README.md)
+training/pytorch-CycleGAN-and-pix2pix/
+
+# debug output
+debug_outputs/
+debug_output/
+
+# build artifacts
 web/
 build/
 dist/
 *.egg-info/
+
+# python
 __pycache__/
 *.py[cod]
 *$py.class
 venv/
 .venv/
 .ipynb_checkpoints/
-# 3. 操作系统 & IDE 垃圾文件
+
+# OS and IDE
 .DS_Store
 .idea/
 *.swp
 *~
 Thumbs.db
-wandb/
+
+# Rhino and weather data
 *.3dmbak
 *.rhl
 *.epw
+
+# images, except documentation assets
 *.png
 !assets/*.png
 !images/*.png
+!docs/*.png
