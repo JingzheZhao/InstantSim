@@ -439,10 +439,4 @@ distributed under its own BSD license and is not included in this repository.
 
 ---
 
-## Contact
 
-For questions or collaboration, open an issue or reach out at [jingzhezhao1303@gmail.com](mailto:jingzhezhao1303@gmail.com).
-
----
-
-<p align="center"><i>Built by an architect, for architects — because great design deserves real-time feedback.</i></p>
